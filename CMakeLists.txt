@@ -10,6 +10,33 @@ set(SFML_DIR "C:/Users/super/SFML-2.5.1/lib/cmake/SFML")
 # Add source files
 file(GLOB SOURCES "src/*.cpp")
 add_executable(${PROJECT_NAME} ${SOURCES})
+cmake_minimum_required(VERSION 3.20)
+
+# Project
+project(visual-score-engine VERSION 1.0 LANGUAGES CXX)
+
+# C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# SFML directory
+# Adjust this path if your SFML install is somewhere else
+set(SFML_DIR "C:/Users/super/SFML-2.5.1/lib/cmake/SFML")
+
+# Collect all source files
+file(GLOB SOURCES "src/*.cpp")
+
+# Create executable
+add_executable(${PROJECT_NAME} ${SOURCES})
+
+# Find SFML components
+find_package(SFML 2.5 COMPONENTS graphics window system REQUIRED)
+
+# Link SFML libraries
+target_link_libraries(${PROJECT_NAME} PRIVATE sfml-graphics sfml-window sfml-system)
+
+# Optional: include SFML headers explicitly if needed
+target_include_directories(${PROJECT_NAME} PRIVATE "${SFML_DIR}/../../include")
 
 # Find SFML 2.5 components
 find_package(SFML 2.5 COMPONENTS graphics window system REQUIRED)
