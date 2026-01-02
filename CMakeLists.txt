@@ -1,45 +1,23 @@
 cmake_minimum_required(VERSION 3.20)
-project(visual-score-engine)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Set path to your SFML 2.5.1 folder
-set(SFML_DIR "C:/Users/super/SFML-2.5.1/lib/cmake/SFML")
-
-# Add source files
-file(GLOB SOURCES "src/*.cpp")
-add_executable(${PROJECT_NAME} ${SOURCES})
-cmake_minimum_required(VERSION 3.20)
-
-# Project
 project(visual-score-engine VERSION 1.0 LANGUAGES CXX)
 
-# C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# SFML directory
-# Adjust this path if your SFML install is somewhere else
+# Path to SFML (Windows)
 set(SFML_DIR "C:/Users/super/SFML-2.5.1/lib/cmake/SFML")
 
-# Collect all source files
-file(GLOB SOURCES "src/*.cpp")
+# Find SFML
+find_package(SFML 2.5 COMPONENTS graphics window system REQUIRED)
 
-# Create executable
+# Source files
+file(GLOB SOURCES CONFIGURE_DEPENDS "src/*.cpp")
+
+# Executable
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-# Find SFML components
-find_package(SFML 2.5 COMPONENTS graphics window system REQUIRED)
-
-# Link SFML libraries
-target_link_libraries(${PROJECT_NAME} PRIVATE sfml-graphics sfml-window sfml-system)
-
-# Optional: include SFML headers explicitly if needed
-target_include_directories(${PROJECT_NAME} PRIVATE "${SFML_DIR}/../../include")
-
-# Find SFML 2.5 components
-find_package(SFML 2.5 COMPONENTS graphics window system REQUIRED)
-
 # Link SFML
-target_link_libraries(${PROJECT_NAME} PRIVATE sfml-graphics sfml-window sfml-system)
+target_link_libraries(${PROJECT_NAME}
+    PRIVATE sfml-graphics sfml-window sfml-system
+)
