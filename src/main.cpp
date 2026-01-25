@@ -2,30 +2,28 @@
 #include <filesystem>
 #include <iostream>
 // #include "pattern_1.h"
-#include "pattern_2.h"
+#include "chops_module.h"
 
 
-int main()
-{
-    const std::string outputDir = "output_images";
+int main() {
+    // Example experiment: moving rectangle
+    runExperimentLoop([](sf::RenderWindow& window){
+        static sf::RectangleShape rect(sf::Vector2f(100.f, 50.f));
+        static bool initialized = false;
+        static float x = 0.f;
 
-    // sf::RenderWindow window(sf::VideoMode(800, 600), "Master Visual Engine");
-    // pattern_1(window);  // draw the static pattern
+        if (!initialized) {
+            rect.setFillColor(sf::Color::Red);
+            rect.setPosition(x, 100.f);
+            initialized = true;
+        }
 
+        x += 0.5f;
+        if (x > window.getSize().x) x = 0;
+        rect.setPosition(x, 100.f);
 
-    // Create directory if it doesn't exist
-    std::filesystem::create_directories(outputDir);
-
-    sf::Image img = generatePattern2(2048, 2048, 9);
-
-    std::string outputPath = outputDir + "/pattern_2.png";
-
-    if (!img.saveToFile(outputPath)) {
-        std::cerr << "Failed to save image\n";
-        return 1;
-    }
-
-
+        window.draw(rect);
+    });
 
     return 0;
 }
