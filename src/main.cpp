@@ -1,13 +1,13 @@
 #include <SFML/Graphics.hpp>
-#include <filesystem>
-#include <iostream>
 #include "pattern_1.h"
+#include "pattern_1_blur.h"
 
 int main() {
     sf::RenderWindow window(sf::VideoMode(1280, 720), "visual-score-engine");
     window.setFramerateLimit(60);
 
-    Pattern1 pattern;
+    Pattern1     pattern;
+    Pattern1Blur patternBlur;
 
     sf::Clock clock;
 
@@ -21,9 +21,11 @@ int main() {
         float dt = clock.restart().asSeconds();
 
         pattern.update(dt);
+        patternBlur.update(dt);
 
         window.clear(sf::Color::Black);
-        pattern.draw(window);
+        patternBlur.draw(window);  // glow drawn first, under the sharp line
+        pattern.draw(window);      // sharp core drawn on top
         window.display();
     }
 
