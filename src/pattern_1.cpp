@@ -1,61 +1,43 @@
 #include "pattern_1.h"
-#include <vector>
-#include <cstdlib>
-#include <ctime>
+#include <cmath>
 
-// Implementation of the static black & purple pattern
-void pattern_1(sf::RenderWindow& window)
-{
-    std::srand(static_cast<unsigned>(std::time(nullptr)));
+Pattern1::Pattern1()
+    : phase(0.f)
+    , brightnessPhase(0.f)
+    , pointCount(1280)
+    , frequency(4.f)
+    , amplitude(120.f)
+    , speed(1.5f)
+    , brightnessSpeed(2.f)
+{}
 
-    window.clear(sf::Color::Black);
+void Pattern1::update(float dt) {
+    phase += speed * dt;
+    brightnessPhase += brightnessSpeed * dt;
+}
 
-    const int rows = 15;
-    const int cols = 20;
-    const float triangleSize = 60.f;
-    const float paddingX = 50.f;
-    const float paddingY = 40.f;
+void Pattern1::draw(sf::RenderWindow& window) {
+    sf::VertexArray waveform(sf::LineStrip, pointCount);
 
-    std::vector<sf::ConvexShape> triangles;
+    float width = 1280.f;
+    float height = 720.f;
+    float centerY = height / 2.f;
 
-    for (int i = 0; i < rows; ++i)
-    {
-        for (int j = 0; j < cols; ++j)
-        {
-            sf::ConvexShape triangle;
-            triangle.setPointCount(3);
+    // brightness pulse between 80 and 255
+    float brightness = 80.f + 175.f * (0.5f + 0.5f * std::sin(brightnessPhase));
+    sf::Uint8 b = static_cast<sf::Uint8>(brightness);
 
-            float angle = std::rand() % 360;
-            triangle.setPoint(0, sf::Vector2f(0.f, 0.f));
-            triangle.setPoint(1, sf::Vector2f(triangleSize, 0.f));
-            triangle.setPoint(2, sf::Vector2f(triangleSize / 2.f, triangleSize));
+    for (int i = 0; i < pointCount; i++) {
+        float x = (float)i;
+        float t = (x / width) * frequency + phase;
 
-            float x = j * paddingX + (std::rand() % 20 - 10);
-            float y = i * paddingY + (std::rand() % 20 - 10);
-            triangle.setPosition(x, y);
+        // sawtooth: fractional part of t mapped to -1..1
+        float saw = 2.f * (t - std::floor(t)) - 1.f;
+        float y = centerY - saw * amplitude;
 
-            sf::Uint8 r = 50 + std::rand() % 50;      // dark purple tones
-            sf::Uint8 g = 0;
-            sf::Uint8 b = 100 + std::rand() % 155;
-            sf::Uint8 alpha = 180;
-
-            triangle.setFillColor(sf::Color(r, g, b, alpha));
-            triangle.setRotation(angle);
-
-            triangles.push_back(triangle);
-        }
+        waveform[i].position = sf::Vector2f(x, y);
+        waveform[i].color = sf::Color(0, b, static_cast<sf::Uint8>(b * 0.85f));
     }
 
-    for (const auto& t : triangles)
-        window.draw(t);
-
-    window.display();
-
-    // Wait until window is closed
-    sf::Event event;
-    while (window.waitEvent(event))
-    {
-        if (event.type == sf::Event::Closed)
-            window.close();
-    }
+    window.draw(waveform);
 }

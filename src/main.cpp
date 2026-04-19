@@ -1,29 +1,31 @@
 #include <SFML/Graphics.hpp>
 #include <filesystem>
 #include <iostream>
-// #include "pattern_1.h"
-#include "chops_module.h"
-
+#include "pattern_1.h"
 
 int main() {
-    // Example experiment: moving rectangle
-    runExperimentLoop([](sf::RenderWindow& window){
-        static sf::RectangleShape rect(sf::Vector2f(100.f, 50.f));
-        static bool initialized = false;
-        static float x = 0.f;
+    sf::RenderWindow window(sf::VideoMode(1280, 720), "visual-score-engine");
+    window.setFramerateLimit(60);
 
-        if (!initialized) {
-            rect.setFillColor(sf::Color::Red);
-            rect.setPosition(x, 100.f);
-            initialized = true;
+    Pattern1 pattern;
+
+    sf::Clock clock;
+
+    while (window.isOpen()) {
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed)
+                window.close();
         }
 
-        x += 0.5f;
-        if (x > window.getSize().x) x = 0;
-        rect.setPosition(x, 100.f);
+        float dt = clock.restart().asSeconds();
 
-        window.draw(rect);
-    });
+        pattern.update(dt);
+
+        window.clear(sf::Color::Black);
+        pattern.draw(window);
+        window.display();
+    }
 
     return 0;
 }
