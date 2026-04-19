@@ -15,6 +15,8 @@ private:
     float amplitude;
     float speed;
     float brightnessSpeed;
-
+    float driftPhase;
+    float driftSpeed;
+    float driftAmount;
     void buildRibbon(sf::VertexArray& va, float halfWidth, sf::Color color);
 };

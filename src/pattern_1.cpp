@@ -24,7 +24,7 @@ void Pattern1::draw(sf::RenderWindow& window) {
     float centerY = height / 2.f;
 
     // brightness pulse between 80 and 255
-    float brightness = 80.f + 175.f * (0.5f + 0.5f * std::sin(brightnessPhase));
+    float brightness = 160.f + 95.f * (0.5f + 0.5f * std::sin(brightnessPhase));
     sf::Uint8 b = static_cast<sf::Uint8>(brightness);
 
     for (int i = 0; i < pointCount; i++) {
