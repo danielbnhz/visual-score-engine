@@ -11,13 +11,25 @@ set(SFML_DIR "C:/Users/super/SFML-2.5.1/lib/cmake/SFML")
 # Find SFML
 find_package(SFML 2.5 COMPONENTS graphics window system REQUIRED)
 
+# GLAD
+add_library(glad STATIC src/glad.c)
+target_include_directories(glad PUBLIC include)
+
 # Source files
 file(GLOB SOURCES CONFIGURE_DEPENDS "src/*.cpp")
 
 # Executable
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-# Link SFML
+# Include directories
+target_include_directories(${PROJECT_NAME} PRIVATE include)
+
+# Link SFML and GLAD
 target_link_libraries(${PROJECT_NAME}
-    PRIVATE sfml-graphics sfml-window sfml-system
+    PRIVATE
+    sfml-graphics
+    sfml-window
+    sfml-system
+    glad
+    opengl32
 )
