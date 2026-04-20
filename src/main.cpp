@@ -51,11 +51,9 @@ int main() {
         patternBlur.draw(window);
         pattern.draw(window);
 
-        // OpenGL layer drawn on top
-        // pattern2.draw() internally calls window.setActive(true/false)
+        window.resetGLStates();   // ← neutralise SFML's state pollution
         pattern2.draw(window);
 
-        // Restore SFML's render state before display
         window.setActive(true);
         window.display();
     }

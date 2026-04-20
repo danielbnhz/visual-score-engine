@@ -136,18 +136,14 @@ void Pattern2::draw(sf::RenderWindow& window) {
     float H = 720.f;
 
     // ── build geometry ──────────────────────────
-    // We work in NDC: x in [-1,1], y in [-1,1]
-    // Map pixel coords → NDC inline
-
     auto toNDC_X = [&](float px) { return (px / W) * 2.f - 1.f; };
-    auto toNDC_Y = [&](float py) { return 1.f - (py / H) * 2.f; };  // flip Y
+    auto toNDC_Y = [&](float py) { return 1.f - (py / H) * 2.f; };
 
     float centerY = H / 2.f;
     float zFront  =  ribbonDepth * 0.5f;
     float zBack   = -ribbonDepth * 0.5f;
 
-    // Compute sawtooth Y for each column sample
-    struct Sample { float x, yTop, yBot; };  // yTop = wave edge, yBot = center line
+    struct Sample { float x, yTop, yBot; };
     std::vector<Sample> samples(pointCount);
 
     for (int i = 0; i < pointCount; ++i) {
@@ -158,14 +154,8 @@ void Pattern2::draw(sf::RenderWindow& window) {
 
         samples[i].x    = toNDC_X(px);
         samples[i].yTop = toNDC_Y(py);
-        samples[i].yBot = toNDC_Y(centerY);  // ribbon base at center line
+        samples[i].yBot = toNDC_Y(centerY);
     }
-
-    // Build triangle list
-    // For each segment [i, i+1] we emit 3 quad faces:
-    //   face 0 (front):  (xL,yTopL,zFront) → (xR,yTopR,zFront) × (xL,yBotL,zFront) etc
-    //   face 1 (top):    front top edge → back top edge
-    //   face 2 (back):   reversed winding
 
     std::vector<float> verts;
     verts.reserve((pointCount - 1) * 3 * 6 * 4);
@@ -184,60 +174,56 @@ void Pattern2::draw(sf::RenderWindow& window) {
         float x3, float y3, float z3,
         float faceId)
     {
-        // Triangle 1: 0,1,2
         push(x0,y0,z0,faceId); push(x1,y1,z1,faceId); push(x2,y2,z2,faceId);
-        // Triangle 2: 0,2,3
         push(x0,y0,z0,faceId); push(x2,y2,z2,faceId); push(x3,y3,z3,faceId);
     };
 
     for (int i = 0; i < pointCount - 1; ++i) {
-        float xL = samples[i].x,   xR = samples[i+1].x;
+        float xL = samples[i].x,    xR = samples[i+1].x;
         float tL = samples[i].yTop, tR = samples[i+1].yTop;
         float bL = samples[i].yBot, bR = samples[i+1].yBot;
 
-        // Front face (z = zFront)
         quad(xL,tL,zFront, xR,tR,zFront, xR,bR,zFront, xL,bL,zFront, 0.f);
-
-        // Top face (wave crest, zFront → zBack)
-        quad(xL,tL,zFront, xR,tR,zFront, xR,tR,zBack, xL,tL,zBack,   1.f);
-
-        // Back face (z = zBack, reversed winding so normals face outward)
-        quad(xL,bL,zBack, xR,bR,zBack, xR,tR,zBack, xL,tL,zBack,     2.f);
+        quad(xL,tL,zFront, xR,tR,zFront, xR,tR,zBack,  xL,tL,zBack,  1.f);
+        quad(xL,bL,zBack,  xR,bR,zBack,  xR,tR,zBack,  xL,tL,zBack,  2.f);
     }
 
-    // ── upload ──────────────────────────────────
+    // ── claim context FIRST, before any GL call ──
+    window.setActive(true);
+
+    // ── upload ───────────────────────────────────
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferSubData(GL_ARRAY_BUFFER, 0, verts.size() * sizeof(float), verts.data());
 
-    // ── render state ────────────────────────────
-    window.setActive(true);
-
-    // Preserve SFML's blend expectation
+    // ── render state ─────────────────────────────
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDisable(GL_DEPTH_TEST);   // painter's order, layered on top of SFML draw
+    glDisable(GL_DEPTH_TEST);
 
     glUseProgram(shaderProgram);
 
-    // Brightness uniform — mirrors Pattern1's formula exactly
     float brightness = 160.f + 95.f * (0.5f + 0.5f * std::sin(brightnessPhase));
     float bNorm = brightness / 255.f;
     glUniform1f(glGetUniformLocation(shaderProgram, "uBrightness"), bNorm);
-
-    // Subtle perspective tilt — ribbon leans slightly up-right
     glUniform1f(glGetUniformLocation(shaderProgram, "uTiltX"),  0.04f);
     glUniform1f(glGetUniformLocation(shaderProgram, "uTiltY"), -0.06f);
-
+    // ── debug: flush all previous GL errors ──────
+    GLenum err;
+    while ((err = glGetError()) != GL_NO_ERROR) {
+        printf("GL error before draw: 0x%x\n", err);
+    }
     glDrawArrays(GL_TRIANGLES, 0, (GLsizei)(verts.size() / 4));
 
+    while ((err = glGetError()) != GL_NO_ERROR) {
+        printf("GL error after draw: 0x%x\n", err);
+    }
     glUseProgram(0);
     glBindVertexArray(0);
 
-    // Hand control back to SFML
+    // ── hand back to SFML ────────────────────────
     window.setActive(false);
 }
-
 // ─────────────────────────────────────────────
 //  Shader helpers
 // ─────────────────────────────────────────────
