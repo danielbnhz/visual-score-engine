@@ -88,6 +88,7 @@ Pattern2::~Pattern2() {
 //  init() — call after SFML window creation
 // ─────────────────────────────────────────────
 void Pattern2::init() {
+
     if (initialized) return;
 
     buildShaderProgram();
@@ -130,6 +131,7 @@ void Pattern2::update(float dt) {
 //  draw
 // ─────────────────────────────────────────────
 void Pattern2::draw(sf::RenderWindow& window) {
+
     if (!initialized) return;
 
     float W = 1280.f;
@@ -210,14 +212,10 @@ void Pattern2::draw(sf::RenderWindow& window) {
     glUniform1f(glGetUniformLocation(shaderProgram, "uTiltY"), -0.06f);
     // ── debug: flush all previous GL errors ──────
     GLenum err;
-    while ((err = glGetError()) != GL_NO_ERROR) {
-        printf("GL error before draw: 0x%x\n", err);
-    }
+
     glDrawArrays(GL_TRIANGLES, 0, (GLsizei)(verts.size() / 4));
 
-    while ((err = glGetError()) != GL_NO_ERROR) {
-        printf("GL error after draw: 0x%x\n", err);
-    }
+
     glUseProgram(0);
     glBindVertexArray(0);
 

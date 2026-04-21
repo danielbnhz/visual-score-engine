@@ -9,7 +9,7 @@ int main() {
     sf::ContextSettings settings;
     settings.majorVersion = 3;
     settings.minorVersion = 3;
-    settings.attributeFlags = sf::ContextSettings::Core;
+    // settings.attributeFlags = sf::ContextSettings::Core;
     settings.depthBits = 24;
 
     sf::RenderWindow window(
