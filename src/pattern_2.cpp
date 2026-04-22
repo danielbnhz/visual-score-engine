@@ -3,24 +3,18 @@
 #include <vector>
 #include <stdexcept>
 
-// ─────────────────────────────────────────────
-//  Vertex shader — simple MVP with no matrices,
-//  we bake NDC directly so we stay coord-aligned
-//  with SFML's 1280x720 canvas.
-// ─────────────────────────────────────────────
 static const char* VERT_SRC = R"(
 #version 330 core
 layout(location = 0) in vec3 aPos;
-layout(location = 1) in float aFaceId;  // 0 = front, 1 = top, 2 = back
+layout(location = 1) in float aFaceId;
 
 out float faceId;
 out float zDepth;
 
-uniform float uTiltX;   // subtle perspective tilt
+uniform float uTiltX;
 uniform float uTiltY;
 
 void main() {
-    // Lean the ribbon toward the viewer with a mild perspective skew
     vec3 p = aPos;
     p.x += p.z * uTiltX;
     p.y += p.z * uTiltY;
@@ -31,64 +25,48 @@ void main() {
 }
 )";
 
-// ─────────────────────────────────────────────
-//  Fragment shader — oscillating cyan/teal palette
-//  synced via uBrightness uniform
-// ─────────────────────────────────────────────
 static const char* FRAG_SRC = R"(
 #version 330 core
 in  float faceId;
 in  float zDepth;
 out vec4  fragColor;
 
-uniform float uBrightness;   // 0..1, mirrors brightnessPhase sin
+uniform float uBrightness;
+uniform float uKickStrength;   // ← new, pulses the glow on beat
 
 void main() {
-    // Base hue: cyan family, matching Pattern1
-    vec3 frontColor = vec3(0.0, uBrightness, uBrightness * 0.85);
-    vec3 topColor   = vec3(0.0, uBrightness * 0.6, uBrightness * 0.5);
-    vec3 backColor  = vec3(0.0, uBrightness * 0.25, uBrightness * 0.2);
+    float boost = 1.0 + 0.4 * uKickStrength;   // kick brightens faces
+
+    vec3 frontColor = vec3(0.0, uBrightness * boost, uBrightness * 0.85 * boost);
+    vec3 topColor   = vec3(0.0, uBrightness * 0.6,   uBrightness * 0.5);
+    vec3 backColor  = vec3(0.0, uBrightness * 0.25,  uBrightness * 0.2);
 
     vec3 color;
     if (faceId < 0.5)       color = frontColor;
     else if (faceId < 1.5)  color = topColor;
     else                    color = backColor;
 
-    // Fade edges toward transparency for soft layering
-    float alpha = 0.55 + 0.35 * uBrightness;
-
+    float alpha = 0.55 + 0.35 * uBrightness + 0.15 * uKickStrength;
     fragColor = vec4(color, alpha);
 }
 )";
 
 // ─────────────────────────────────────────────
-//  Ctor / Dtor
-// ─────────────────────────────────────────────
 Pattern2::Pattern2()
-    : phase(0.f)
-    , brightnessPhase(0.f)
-    , frequency(4.f)
-    , amplitude(120.f)
-    , speed(1.5f)
-    , brightnessSpeed(2.f)
-    , pointCount(320)       // fewer points than Pattern1; ribbon quads fill the gaps
-    , ribbonDepth(0.06f)    // NDC units of Z extrusion
+    : ribbonDepth(0.06f)
+    , pointCount(320)
     , vao(0), vbo(0)
     , shaderProgram(0)
     , initialized(false)
 {}
 
 Pattern2::~Pattern2() {
-    if (vao) glDeleteVertexArrays(1, &vao);
-    if (vbo) glDeleteBuffers(1, &vbo);
+    if (vao)           glDeleteVertexArrays(1, &vao);
+    if (vbo)           glDeleteBuffers(1, &vbo);
     if (shaderProgram) glDeleteProgram(shaderProgram);
 }
 
-// ─────────────────────────────────────────────
-//  init() — call after SFML window creation
-// ─────────────────────────────────────────────
 void Pattern2::init() {
-
     if (initialized) return;
 
     buildShaderProgram();
@@ -96,20 +74,14 @@ void Pattern2::init() {
     glGenVertexArrays(1, &vao);
     glGenBuffers(1, &vbo);
 
-    // Allocate max buffer — updated each frame
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-    // Each segment: 3 quads (front face, top face, back face)
-    // Each quad = 2 triangles = 6 vertices
-    // Each vertex: vec3 pos + float faceId = 4 floats
     size_t maxVerts = (size_t)(pointCount - 1) * 3 * 6;
     glBufferData(GL_ARRAY_BUFFER, maxVerts * 4 * sizeof(float), nullptr, GL_DYNAMIC_DRAW);
 
-    // aPos
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-    // aFaceId
     glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
@@ -119,25 +91,12 @@ void Pattern2::init() {
     initialized = true;
 }
 
-// ─────────────────────────────────────────────
-//  update — identical timing to Pattern1
-// ─────────────────────────────────────────────
-void Pattern2::update(float dt) {
-    phase         += speed         * dt;
-    brightnessPhase += brightnessSpeed * dt;
-}
-
-// ─────────────────────────────────────────────
-//  draw
-// ─────────────────────────────────────────────
-void Pattern2::draw(sf::RenderWindow& window) {
-
+void Pattern2::draw(sf::RenderWindow& window, const EngineState& state) {
     if (!initialized) return;
 
     float W = 1280.f;
     float H = 720.f;
 
-    // ── build geometry ──────────────────────────
     auto toNDC_X = [&](float px) { return (px / W) * 2.f - 1.f; };
     auto toNDC_Y = [&](float py) { return 1.f - (py / H) * 2.f; };
 
@@ -149,10 +108,10 @@ void Pattern2::draw(sf::RenderWindow& window) {
     std::vector<Sample> samples(pointCount);
 
     for (int i = 0; i < pointCount; ++i) {
-        float px = (float)i / (float)(pointCount - 1) * W;
-        float t  = (px / W) * frequency + phase;
+        float px  = (float)i / (float)(pointCount - 1) * W;
+        float t   = (px / W) * state.frequency + state.phase;
         float saw = 2.f * (t - std::floor(t)) - 1.f;
-        float py  = centerY - saw * amplitude;
+        float py  = centerY - saw * state.effectiveAmplitude;  // kicks land here
 
         samples[i].x    = toNDC_X(px);
         samples[i].yTop = toNDC_Y(py);
@@ -163,10 +122,8 @@ void Pattern2::draw(sf::RenderWindow& window) {
     verts.reserve((pointCount - 1) * 3 * 6 * 4);
 
     auto push = [&](float x, float y, float z, float fid) {
-        verts.push_back(x);
-        verts.push_back(y);
-        verts.push_back(z);
-        verts.push_back(fid);
+        verts.push_back(x); verts.push_back(y);
+        verts.push_back(z); verts.push_back(fid);
     };
 
     auto quad = [&](
@@ -190,41 +147,34 @@ void Pattern2::draw(sf::RenderWindow& window) {
         quad(xL,bL,zBack,  xR,bR,zBack,  xR,tR,zBack,  xL,tL,zBack,  2.f);
     }
 
-    // ── claim context FIRST, before any GL call ──
     window.setActive(true);
 
-    // ── upload ───────────────────────────────────
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferSubData(GL_ARRAY_BUFFER, 0, verts.size() * sizeof(float), verts.data());
 
-    // ── render state ─────────────────────────────
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_DEPTH_TEST);
 
     glUseProgram(shaderProgram);
 
-    float brightness = 160.f + 95.f * (0.5f + 0.5f * std::sin(brightnessPhase));
+    float brightness = 160.f + 95.f * (0.5f + 0.5f * std::sin(state.brightnessPhase));
     float bNorm = brightness / 255.f;
-    glUniform1f(glGetUniformLocation(shaderProgram, "uBrightness"), bNorm);
+
+    glUniform1f(glGetUniformLocation(shaderProgram, "uBrightness"),   bNorm);
+    glUniform1f(glGetUniformLocation(shaderProgram, "uKickStrength"), state.kickStrength);
     glUniform1f(glGetUniformLocation(shaderProgram, "uTiltX"),  0.04f);
     glUniform1f(glGetUniformLocation(shaderProgram, "uTiltY"), -0.06f);
-    // ── debug: flush all previous GL errors ──────
-    GLenum err;
 
     glDrawArrays(GL_TRIANGLES, 0, (GLsizei)(verts.size() / 4));
-
 
     glUseProgram(0);
     glBindVertexArray(0);
 
-    // ── hand back to SFML ────────────────────────
     window.setActive(false);
 }
-// ─────────────────────────────────────────────
-//  Shader helpers
-// ─────────────────────────────────────────────
+
 GLuint Pattern2::compileShader(GLenum type, const char* src) {
     GLuint s = glCreateShader(type);
     glShaderSource(s, 1, &src, nullptr);

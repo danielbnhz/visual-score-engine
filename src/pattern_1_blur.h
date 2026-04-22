@@ -1,22 +1,17 @@
 #pragma once
 #include <SFML/Graphics.hpp>
+#include "engine_state.h"
 
 class Pattern1Blur {
 public:
     Pattern1Blur();
-    void update(float dt);
-    void draw(sf::RenderWindow& window);
+    void draw(sf::RenderWindow& window, const EngineState& state);
 
 private:
-    float phase;
-    float brightnessPhase;
-    int   pointCount;
-    float frequency;
-    float amplitude;
-    float speed;
-    float brightnessSpeed;
     float driftPhase;
     float driftSpeed;
     float driftAmount;
-    void buildRibbon(sf::VertexArray& va, float halfWidth, sf::Color color);
+
+    void buildRibbon(sf::VertexArray& va, float halfWidth, sf::Color color,
+                     const EngineState& state, float centerY);
 };

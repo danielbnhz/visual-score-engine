@@ -1,18 +1,9 @@
 #pragma once
 #include <SFML/Graphics.hpp>
+#include "engine_state.h"
 
 class Pattern1 {
 public:
     Pattern1();
-    void update(float dt);
-    void draw(sf::RenderWindow& window);
-
-private:
-    float phase;
-    float brightnessPhase;
-    int pointCount;
-    float frequency;
-    float amplitude;
-    float speed;
-    float brightnessSpeed;
+    void draw(sf::RenderWindow& window, const EngineState& state);
 };
